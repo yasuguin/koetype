@@ -1,14 +1,40 @@
 name: Windows Test
+# ci-policy: keep-pull_request（Windows での確認は PR ごとに残す。2026-11-26 ユーザー決定。dotfiles の毎日の点検 ci_policy.py への印）
 
 on:
+  # 検証は push では起動しない。印で残した PR と、手動・週 1 回だけ(dotfiles の tdd の verification-gate.md)。
   pull_request:
   workflow_dispatch:
+  schedule:
+    # 週 1 回(月曜の JST の朝)。時刻は repo ごとにずらし、毎時ちょうどを避ける(gha-runner-setup の gha-schedule-design)。
+    - cron: "54 23 * * 0"
 
 permissions:
   contents: read
 
 jobs:
+  # 週 1 回の schedule は、その週に main が変わったときだけ検査する(触っていない repo で毎週回さない)。手動・PR では常に回す。
+  # schedule の遅れで前の回の後の commit を取りこぼさないよう、7 日に 3 時間の余裕を足す(dotfiles の tdd の verification-gate.md)。
+  changed:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.age.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: age
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          age=$(( $(date +%s) - $(git log -1 --format=%ct) ))
+          if [ "$age" -le $(( 7 * 86400 + 3 * 3600 )) ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "直近 7 日に main の変更が無いので、週 1 回の検査を飛ばします"
+          fi
+
   windows-test:
+    needs: changed
+    if: needs.changed.outputs.run == 'true'
     runs-on: windows-latest
     steps:
       - name: Checkout repository
