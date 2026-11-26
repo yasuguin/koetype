@@ -1,5 +1,5 @@
 name: Windows Test
-# ci-policy: keep-pull_request（Windows での確認は PR ごとに残す。2026-11-26 ユーザー決定。dotfiles の毎日の点検 ci_policy.py への印）
+# dev-policy: keep-pull_request（Windows での確認は PR ごとに残す。2026-11-26 ユーザー決定。dotfiles の毎日の点検 dev_policy.py への印）
 
 on:
   # 検証は push では起動しない。印で残した PR と、手動・週 1 回だけ(dotfiles の tdd の verification-gate.md)。
